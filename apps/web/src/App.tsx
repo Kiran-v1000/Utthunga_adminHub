@@ -36,16 +36,27 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
   // response interceptor does NOT fire and trigger a redirect loop.
   useEffect(() => {
     (async () => {
+      const apiBase = import.meta.env.VITE_API_URL
+        ? `${import.meta.env.VITE_API_URL}/api`
+        : '/api';
       try {
-        const apiBase = import.meta.env.VITE_API_URL
-          ? `${import.meta.env.VITE_API_URL}/api`
-          : '/api';
-        const { data } = await axios.post(
-          `${apiBase}/auth/refresh`,
-          {},
-          { withCredentials: true },
-        );
-        const token: string = data.data.accessToken;
+        let token: string;
+        try {
+          const { data } = await axios.post(
+            `${apiBase}/auth/refresh`,
+            {},
+            { withCredentials: true },
+          );
+          token = data.data.accessToken;
+        } catch {
+          // TEMP: auto-login as admin while login screen is disabled (remove this fallback to restore login)
+          const { data } = await axios.post(
+            `${apiBase}/auth/local-login`,
+            { email: 'admin@utthunga.com', password: 'Admin@123' },
+            { withCredentials: true },
+          );
+          token = data.data.accessToken;
+        }
         setAccessToken(token);
         // Use the api instance (with token now set) for subsequent calls
         const me = await api.get('/auth/me', {
