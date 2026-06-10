@@ -1,0 +1,234 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Light theme tokens ─────────────────────────────────── */
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* Semantic / theme-adaptive colours (space-separated R G B for Tailwind opacity) */
+    --surface:  248 247 255;
+    --card:     255 255 255;
+    --border:   228 228 240;
+    --text-1:   15  14  26;
+    --text-2:   107 107 138;
+    --sidebar:  15  13  30;
+
+    /* shadcn CSS vars */
+    --background:        248 247 255;
+    --foreground:        15  14  26;
+    --card-foreground:   15  14  26;
+    --popover:           255 255 255;
+    --popover-foreground:15  14  26;
+    --primary:           91  33  182;
+    --primary-foreground:255 255 255;
+    --secondary:         124 58  237;
+    --secondary-foreground:255 255 255;
+    --muted:             248 247 255;
+    --muted-foreground:  107 107 138;
+    --accent:            14  165 233;
+    --accent-foreground: 255 255 255;
+    --destructive:       220 38  38;
+    --destructive-foreground:255 255 255;
+    --input:             228 228 240;
+    --ring:              91  33  182;
+  }
+
+  /* ── Dark theme tokens ──────────────────────────────────── */
+  .dark {
+    --surface:  12  10  24;
+    --card:     20  17  38;
+    --border:   42  38  72;
+    --text-1:   238 235 255;
+    --text-2:   130 124 168;
+    --sidebar:  8   6   18;
+
+    --background:        12  10  24;
+    --foreground:        238 235 255;
+    --card-foreground:   238 235 255;
+    --popover:           20  17  38;
+    --popover-foreground:238 235 255;
+    --muted:             28  24  50;
+    --muted-foreground:  130 124 168;
+    --input:             42  38  72;
+  }
+
+  * { @apply border-border; }
+
+  body {
+    @apply bg-surface text-text-1 font-sans antialiased;
+    font-size: 14px;
+  }
+
+  h1 { @apply text-display; }
+  h2 { @apply text-heading; }
+  h3 { @apply text-subhead; }
+}
+
+/* ── Component classes ──────────────────────────────────── */
+@layer components {
+
+  /* Sidebar nav items */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+           text-white/50 hover:text-white hover:bg-white/10 transition-all duration-150
+           cursor-pointer relative overflow-hidden;
+  }
+  .sidebar-link-active {
+    @apply text-white bg-gradient-to-r from-violet-600/50 to-purple-500/30
+           border-l-2 border-violet-400 shadow-glow-sm;
+  }
+
+  /* Metric / stat cards — light gradient base */
+  .metric-card {
+    @apply rounded-2xl border border-border shadow-card p-5
+           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+    background: linear-gradient(135deg, #ffffff 0%, #f5f0ff 100%);
+  }
+  .dark .metric-card {
+    background: linear-gradient(135deg, rgb(20 17 38) 0%, rgb(28 22 52) 100%);
+    @apply border-border;
+  }
+
+  /* Colour-tinted card variants */
+  .metric-card-violet {
+    background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%);
+    @apply rounded-2xl border border-violet-100 shadow-card p-5
+           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+  }
+  .dark .metric-card-violet {
+    background: linear-gradient(135deg, rgb(30 20 55) 0%, rgb(45 25 75) 100%);
+    @apply border-violet-900/40;
+  }
+
+  .metric-card-blue {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    @apply rounded-2xl border border-sky-100 shadow-card p-5
+           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+  }
+  .dark .metric-card-blue {
+    background: linear-gradient(135deg, rgb(10 25 45) 0%, rgb(15 35 60) 100%);
+    @apply border-sky-900/40;
+  }
+
+  .metric-card-green {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    @apply rounded-2xl border border-emerald-100 shadow-card p-5
+           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+  }
+  .dark .metric-card-green {
+    background: linear-gradient(135deg, rgb(10 28 20) 0%, rgb(15 40 28) 100%);
+    @apply border-emerald-900/40;
+  }
+
+  .metric-card-amber {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    @apply rounded-2xl border border-amber-100 shadow-card p-5
+           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+  }
+  .dark .metric-card-amber {
+    background: linear-gradient(135deg, rgb(28 22 8) 0%, rgb(40 30 10) 100%);
+    @apply border-amber-900/40;
+  }
+
+  .metric-card-rose {
+    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+    @apply rounded-2xl border border-rose-100 shadow-card p-5
+           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+  }
+  .dark .metric-card-rose {
+    background: linear-gradient(135deg, rgb(30 10 14) 0%, rgb(45 14 18) 100%);
+    @apply border-rose-900/40;
+  }
+
+  /* Premium gradient card */
+  .metric-card-premium {
+    @apply rounded-2xl border border-white/10 p-5 text-white
+           transition-all duration-200 hover:shadow-glow hover:-translate-y-0.5;
+  }
+
+  .page-header {
+    @apply flex items-center justify-between mb-6;
+  }
+
+  .data-table-row {
+    @apply border-b border-border hover:bg-primary/5 transition-colors duration-150;
+  }
+  .data-table-row:nth-child(even) {
+    @apply bg-surface/60;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-caption font-medium;
+  }
+
+  /* Frosted glass panel */
+  .glass-panel {
+    @apply bg-card/80 backdrop-blur-md border border-border/60;
+  }
+}
+
+/* ── Custom scrollbar ───────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(var(--border)); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(124,58,237,0.35); }
+
+/* ── Keyframe definitions ───────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-down {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes stagger-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-sidebar {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Utility animation classes ──────────────────────────── */
+.page-enter         { animation: fade-up   0.35s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-fade-up    { animation: fade-up   0.35s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-fade-down  { animation: fade-down 0.3s  cubic-bezier(0.16,1,0.3,1) both; }
+.animate-scale-in   { animation: scale-in  0.3s  cubic-bezier(0.16,1,0.3,1) both; }
+
+/* Staggered grid/list — add class to container */
+.stagger-children > * {
+  animation: stagger-in 0.3s cubic-bezier(0.16,1,0.3,1) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+
+/* ── Shimmer skeleton loader ─────────────────────────────── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--surface)) 25%,
+    rgb(var(--border))  50%,
+    rgb(var(--surface)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.5rem;
+}

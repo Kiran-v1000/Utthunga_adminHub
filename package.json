@@ -1,0 +1,27 @@
+{
+  "name": "utthunga-adminhub",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"yarn workspace @adminhub/api dev\" \"yarn workspace @adminhub/web dev\"",
+    "build": "yarn workspace @adminhub/shared build && yarn workspace @adminhub/api build && yarn workspace @adminhub/web build",
+    "lint": "yarn workspaces run lint",
+    "test": "yarn workspaces run test",
+    "db:generate": "yarn workspace @adminhub/api db:generate",
+    "db:migrate": "yarn workspace @adminhub/api db:migrate",
+    "db:seed": "yarn workspace @adminhub/api db:seed",
+    "db:studio": "yarn workspace @adminhub/api db:studio"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "yarn": ">=1.22.0"
+  }
+}

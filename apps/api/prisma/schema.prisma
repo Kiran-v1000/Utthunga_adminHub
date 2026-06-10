@@ -1,0 +1,767 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  FACILITY_MANAGER
+  ADMIN_EXECUTIVE
+  HR_TEAM
+  FINANCE_TEAM
+  REPORTING_MANAGER
+  BU_HEAD
+  RECEPTIONIST
+  EMPLOYEE
+}
+
+enum OfficeLocation {
+  BANGALORE
+  PUNE
+}
+
+enum EmployeeType {
+  FULL_TIME
+  CONSULTANT
+  INTERN
+  TRAINEE
+}
+
+enum VisitorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+}
+
+enum TravelType {
+  DOMESTIC
+  INTERNATIONAL
+}
+
+enum TravelStatus {
+  DRAFT
+  MANAGER_APPROVAL
+  BU_HEAD_APPROVAL
+  ADMIN_PROCESSING
+  BOOKED
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum ShipmentType {
+  INBOUND
+  OUTBOUND
+}
+
+enum ShipmentStatus {
+  RAISED
+  ASSIGNED
+  PICKUP_SCHEDULED
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum GrievanceCategory {
+  FACILITY
+  SAFETY
+  HOUSEKEEPING
+  INFRASTRUCTURE
+  OTHER
+}
+
+enum GrievancePriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum GrievanceStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  REOPENED
+}
+
+enum RoomType {
+  BOARDROOM
+  TRAINING
+  CAFETERIA
+  CONFERENCE
+  HUDDLE
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum AssetStatus {
+  ACTIVE
+  MAINTENANCE
+  TRANSFERRED
+  DISPOSED
+  LOST
+}
+
+enum DepreciationMethod {
+  SLM
+  WDV
+}
+
+enum InventoryCategory {
+  STATIONERY
+  CONSUMABLES
+  EVENT
+  MAINTENANCE
+  CLEANING
+  CAFETERIA
+}
+
+enum IDCardStatus {
+  PENDING_GENERATION
+  ADMIN_NOTIFIED
+  GENERATED
+  PRINTED
+  ISSUED
+  EXPIRED
+  DEACTIVATED
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CORE
+// ─────────────────────────────────────────────────────────────────
+
+model User {
+  id             String         @id @default(cuid())
+  azureAdId      String?        @unique
+  passwordHash   String?
+  email          String         @unique
+  name           String
+  employeeId     String?        @unique
+  role           Role
+  officeLocation OfficeLocation
+  department     String?
+  designation    String?
+  buId           String?
+  managerId      String?
+  avatar         String?
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  manager  User?  @relation("ManagerReports", fields: [managerId], references: [id])
+  reports  User[] @relation("ManagerReports")
+  bu       BusinessUnit? @relation(fields: [buId], references: [id])
+
+  hostedVisitors     VisitorRequest[]  @relation("HostVisitors")
+  travelRequests     TravelRequest[]
+  visaRecords        VisaRecord[]
+  shipmentRequests   ShipmentRequest[]
+  grievancesSubmitted GrievanceTicket[] @relation("SubmittedGrievances")
+  grievancesAssigned  GrievanceTicket[] @relation("AssignedGrievances")
+  roomBookings       RoomBooking[]
+  ownedAssets        Asset[]
+  idCards            IDCard[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  refreshTokens      RefreshToken[]
+}
+
+model BusinessUnit {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  headId    String?
+  createdAt DateTime @default(now())
+
+  users          User[]
+  travelRequests TravelRequest[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  oldValues Json?
+  newValues Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODULE 1 — VISITOR MANAGEMENT
+// ─────────────────────────────────────────────────────────────────
+
+model MeetingRoom {
+  id             String         @id @default(cuid())
+  name           String
+  floor          String?
+  capacity       Int
+  officeLocation OfficeLocation
+  isActive       Boolean        @default(true)
+  equipment      String[]
+  createdAt      DateTime       @default(now())
+
+  visitors VisitorRequest[]
+}
+
+model VisitorRequest {
+  id             String         @id @default(cuid())
+  guestName      String
+  guestEmail     String?
+  guestPhone     String?
+  company        String?
+  hostId         String
+  host           User           @relation("HostVisitors", fields: [hostId], references: [id])
+  purpose        String
+  officeLocation OfficeLocation
+  visitDate      DateTime
+  lunchRequired  Boolean        @default(false)
+  snacksRequired Boolean        @default(false)
+  meetingRoomId  String?
+  meetingRoom    MeetingRoom?   @relation(fields: [meetingRoomId], references: [id])
+  status         VisitorStatus  @default(PENDING)
+  qrCode         String?
+  checkInAt      DateTime?
+  checkOutAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  badge    VisitorBadge?
+  feedback VisitorFeedback?
+}
+
+model VisitorBadge {
+  id               String         @id @default(cuid())
+  visitorRequestId String         @unique
+  visitorRequest   VisitorRequest @relation(fields: [visitorRequestId], references: [id])
+  badgeNumber      String         @unique
+  printedAt        DateTime?
+  printedBy        String?
+  createdAt        DateTime       @default(now())
+}
+
+model VisitorFeedback {
+  id               String         @id @default(cuid())
+  visitorRequestId String         @unique
+  visitorRequest   VisitorRequest @relation(fields: [visitorRequestId], references: [id])
+  rating           Int
+  comments         String?
+  createdAt        DateTime       @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODULE 2 — TRAVEL & ACCOMMODATION
+// ─────────────────────────────────────────────────────────────────
+
+model TravelRequest {
+  id                    String       @id @default(cuid())
+  requestNumber         String       @unique
+  userId                String
+  user                  User         @relation(fields: [userId], references: [id])
+  travelType            TravelType
+  origin                String
+  destination           String
+  departureDate         DateTime
+  returnDate            DateTime
+  purpose               String
+  costCenter            String
+  buId                  String?
+  bu                    BusinessUnit? @relation(fields: [buId], references: [id])
+  managerId             String?
+  buHeadId              String?
+  accommodationRequired Boolean      @default(false)
+  advanceRequired       Boolean      @default(false)
+  advanceAmount         Float?
+  status                TravelStatus @default(DRAFT)
+  managerApprovedAt     DateTime?
+  buHeadApprovedAt      DateTime?
+  rejectionReason       String?
+  itineraryUrl          String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  bookings  TravelBooking[]
+  documents TravelDocument[]
+}
+
+model TravelBooking {
+  id              String        @id @default(cuid())
+  travelRequestId String
+  travelRequest   TravelRequest @relation(fields: [travelRequestId], references: [id])
+  type            String
+  provider        String?
+  bookingRef      String?
+  amount          Float?
+  bookingDate     DateTime?
+  details         Json?
+  createdAt       DateTime      @default(now())
+}
+
+model TravelDocument {
+  id              String        @id @default(cuid())
+  travelRequestId String
+  travelRequest   TravelRequest @relation(fields: [travelRequestId], references: [id])
+  name            String
+  url             String
+  mimeType        String?
+  createdAt       DateTime      @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODULE 3 — VISA MANAGEMENT
+// ─────────────────────────────────────────────────────────────────
+
+model VisaRecord {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  visaNumber     String
+  country        String
+  visaType       String
+  issueDate      DateTime
+  expiryDate     DateTime
+  passportNumber String
+  documentUrls   String[]
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  requests VisaRequest[]
+  alerts   VisaAlert[]
+
+  @@index([expiryDate])
+}
+
+model VisaRequest {
+  id           String     @id @default(cuid())
+  visaRecordId String
+  visaRecord   VisaRecord @relation(fields: [visaRecordId], references: [id])
+  requestType  String
+  status       String     @default("PENDING")
+  notes        String?
+  processedBy  String?
+  processedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model VisaAlert {
+  id           String     @id @default(cuid())
+  visaRecordId String
+  visaRecord   VisaRecord @relation(fields: [visaRecordId], references: [id])
+  alertType    String
+  sentAt       DateTime?
+  createdAt    DateTime   @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODULE 4 — SHIPMENT MANAGEMENT
+// ─────────────────────────────────────────────────────────────────
+
+model CourierPartner {
+  id          String    @id @default(cuid())
+  name        String
+  code        String    @unique
+  trackingUrl String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  shipments ShipmentRequest[]
+}
+
+model ShipmentRequest {
+  id               String          @id @default(cuid())
+  requestNumber    String          @unique
+  type             ShipmentType
+  requesterId      String
+  requester        User            @relation(fields: [requesterId], references: [id])
+  courierPartnerId String?
+  courierPartner   CourierPartner? @relation(fields: [courierPartnerId], references: [id])
+  trackingNumber   String?
+  senderName       String
+  senderAddress    String
+  receiverName     String
+  receiverAddress  String
+  officeLocation   OfficeLocation
+  weight           Float?
+  dimensions       String?
+  pickupDate       DateTime?
+  expectedDelivery DateTime?
+  status           ShipmentStatus  @default(RAISED)
+  assignedTo       String?
+  documents        String[]
+  notes            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  tracking ShipmentTracking[]
+}
+
+model ShipmentTracking {
+  id                String          @id @default(cuid())
+  shipmentRequestId String
+  shipmentRequest   ShipmentRequest @relation(fields: [shipmentRequestId], references: [id])
+  status            ShipmentStatus
+  location          String?
+  notes             String?
+  updatedBy         String?
+  createdAt         DateTime        @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODULE 5 — EMPLOYEE GRIEVANCE
+// ─────────────────────────────────────────────────────────────────
+
+model GrievanceTicket {
+  id             String            @id @default(cuid())
+  ticketNumber   String            @unique
+  submittedById  String
+  submittedBy    User              @relation("SubmittedGrievances", fields: [submittedById], references: [id])
+  category       GrievanceCategory
+  priority       GrievancePriority
+  subject        String
+  description    String
+  officeLocation OfficeLocation
+  attachments    String[]
+  status         GrievanceStatus   @default(OPEN)
+  assignedToId   String?
+  assignedTo     User?             @relation("AssignedGrievances", fields: [assignedToId], references: [id])
+  resolution     String?
+  resolvedAt     DateTime?
+  slaBreached    Boolean           @default(false)
+  dueAt          DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  comments GrievanceComment[]
+
+  @@index([status, priority])
+  @@index([assignedToId])
+}
+
+model GrievanceComment {
+  id         String          @id @default(cuid())
+  ticketId   String
+  ticket     GrievanceTicket @relation(fields: [ticketId], references: [id])
+  authorId   String
+  content    String
+  isInternal Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODULE 6 — RESOURCE BOOKING
+// ─────────────────────────────────────────────────────────────────
+
+model Room {
+  id             String         @id @default(cuid())
+  name           String
+  type           RoomType
+  capacity       Int
+  floor          String?
+  officeLocation OfficeLocation
+  equipment      String[]
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+
+  bookings RoomBooking[]
+}
+
+model RoomBooking {
+  id         String        @id @default(cuid())
+  roomId     String
+  room       Room          @relation(fields: [roomId], references: [id])
+  bookedById String
+  bookedBy   User          @relation(fields: [bookedById], references: [id])
+  title      String
+  startTime  DateTime
+  endTime    DateTime
+  attendees  Int?
+  status     BookingStatus @default(CONFIRMED)
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([roomId, startTime, endTime])
+}
+
+model PrintRequest {
+  id             String         @id @default(cuid())
+  requesterId    String
+  title          String
+  copies         Int
+  colorPrint     Boolean        @default(false)
+  doubleSided    Boolean        @default(true)
+  fileUrl        String
+  status         String         @default("PENDING")
+  officeLocation OfficeLocation
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model PurchaseRequest {
+  id              String   @id @default(cuid())
+  requestNumber   String   @unique
+  requesterId     String
+  itemName        String
+  description     String?
+  quantity        Int
+  estimatedCost   Float
+  vendor          String?
+  justification   String
+  status          String   @default("PENDING")
+  approvedBy      String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model EventBooking {
+  id               String         @id @default(cuid())
+  eventName        String
+  requesterId      String
+  officeLocation   OfficeLocation
+  date             DateTime
+  startTime        DateTime
+  endTime          DateTime
+  attendeeCount    Int
+  requirements     String[]
+  cateringRequired Boolean        @default(false)
+  status           String         @default("PENDING")
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODULE 7 — ASSET TRACKING
+// ─────────────────────────────────────────────────────────────────
+
+model Asset {
+  id                 String              @id @default(cuid())
+  assetId            String              @unique
+  name               String
+  category           String
+  serialNumber       String?             @unique
+  brand              String?
+  model              String?
+  purchaseDate       DateTime?
+  purchaseCost       Float?
+  currentValue       Float?
+  depreciationMethod DepreciationMethod?
+  warrantyExpiry     DateTime?
+  status             AssetStatus         @default(ACTIVE)
+  officeLocation     OfficeLocation
+  branchId           String?
+  ownerId            String?
+  owner              User?               @relation(fields: [ownerId], references: [id])
+  costCenter         String?
+  glCode             String?
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  maintenanceRecords AssetMaintenance[]
+  transfers          AssetTransfer[]
+  disposals          AssetDisposal[]
+
+  @@index([status])
+  @@index([officeLocation])
+}
+
+model AssetMaintenance {
+  id          String   @id @default(cuid())
+  assetId     String
+  asset       Asset    @relation(fields: [assetId], references: [id])
+  type        String
+  scheduledAt DateTime
+  completedAt DateTime?
+  vendor      String?
+  cost        Float?
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model AssetTransfer {
+  id            String   @id @default(cuid())
+  assetId       String
+  asset         Asset    @relation(fields: [assetId], references: [id])
+  fromLocation  String
+  toLocation    String
+  fromOwnerId   String?
+  toOwnerId     String?
+  reason        String?
+  transferredAt DateTime
+  approvedBy    String?
+  createdAt     DateTime @default(now())
+}
+
+model AssetDisposal {
+  id             String   @id @default(cuid())
+  assetId        String
+  asset          Asset    @relation(fields: [assetId], references: [id])
+  reason         String
+  method         String
+  disposedAt     DateTime
+  proceedsAmount Float?
+  approvedBy     String?
+  notes          String?
+  createdAt      DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODULE 8 — INVENTORY MANAGEMENT
+// ─────────────────────────────────────────────────────────────────
+
+model InventoryItem {
+  id             String            @id @default(cuid())
+  itemCode       String            @unique
+  name           String
+  category       InventoryCategory
+  unit           String
+  quantity       Int               @default(0)
+  reorderLevel   Int               @default(10)
+  maxLevel       Int?
+  unitCost       Float?
+  officeLocation OfficeLocation
+  branchId       String?
+  location       String?
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  transactions  StockTransaction[]
+  reorderAlerts ReorderAlert[]
+
+  @@index([quantity, reorderLevel])
+}
+
+model StockTransaction {
+  id              String        @id @default(cuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  type            String
+  quantity        Int
+  reason          String?
+  referenceId     String?
+  performedBy     String
+  fromLocation    String?
+  toLocation      String?
+  createdAt       DateTime      @default(now())
+}
+
+model ReorderAlert {
+  id              String        @id @default(cuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  currentQuantity Int
+  reorderLevel    Int
+  status          String        @default("PENDING")
+  sentAt          DateTime      @default(now())
+  resolvedAt      DateTime?
+  createdAt       DateTime      @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MODULE 9 — ID CARD MANAGEMENT
+// ─────────────────────────────────────────────────────────────────
+
+model IDCard {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  employeeType EmployeeType
+  cardNumber   String?      @unique
+  status       IDCardStatus @default(PENDING_GENERATION)
+  issuedAt     DateTime?
+  expiryDate   DateTime?
+  photoUrl     String?
+  printedAt    DateTime?
+  printedBy    String?
+  collectedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  requests IDCardRequest[]
+
+  @@index([status])
+}
+
+model IDCardRequest {
+  id          String   @id @default(cuid())
+  idCardId    String
+  idCard      IDCard   @relation(fields: [idCardId], references: [id])
+  requestType String
+  reason      String?
+  status      String   @default("PENDING")
+  processedBy String?
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ExitRecord {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  exitDate        DateTime
+  idCardCollected Boolean   @default(false)
+  collectedAt     DateTime?
+  collectedBy     String?
+  assetsReturned  Boolean   @default(false)
+  clearanceStatus String    @default("PENDING")
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
